@@ -1,0 +1,70 @@
+version: 2.1
+
+executors:
+  golang:
+    working_directory: /go/src/github.com/kouzoh/bigbrother
+    docker:
+      - image: golang:1.13-stretch
+        environment:
+          GOOGLE_APPLICATION_CREDENTIALS: /etc/google/application_default_credentials.json
+
+jobs:
+  test:
+    executor: golang
+    steps:
+      - checkout
+      - run:
+          name: set credentials
+          command: |
+            rm -f ~/.gitconfig
+            echo "machine github.com login ${GITHUB_TOKEN}" > ~/.netrc
+            mkdir -p /etc/google/
+            echo ${SPANNER_CREDENTIALS_JSON} > ${GOOGLE_APPLICATION_CREDENTIALS}
+      - run:
+          name: install tools
+          command: make tools
+      - run:
+          name: get database for testing
+          command: |
+            DATABASE_ID=$(make spool/get-or-create)
+            echo "DATABASE_ID=${DATABASE_ID}"
+            echo "export DATABASE_ID=${DATABASE_ID}" >> ${BASH_ENV}
+      - run:
+          name: run tests
+          command: make test/ci DATABASE_ID=${DATABASE_ID}
+      - run:
+          name: release database
+          when: always
+          command: make spool/put DATABASE_ID=${DATABASE_ID}
+  cleanup-old-test-db:
+    executor: golang
+    steps:
+      - checkout
+      - run:
+          name: set credentials
+          command: |
+            rm -f ~/.gitconfig
+            echo "machine github.com login ${GITHUB_TOKEN}" > ~/.netrc
+            mkdir -p /etc/google/
+            echo ${SPANNER_CREDENTIALS_JSON} > ${GOOGLE_APPLICATION_CREDENTIALS}
+      - run:
+          name: install tools
+          command: make tools
+      - run:
+          name: cleanup databases
+          command: make test/clean
+
+workflows:
+  version: 2
+  build-workflow:
+    jobs:
+      - test
+  cleanup-workflow:
+    triggers:
+      - schedule:
+          cron: "0 9 * * *"
+          filters:
+            branches:
+              only: master
+    jobs:
+      - cleanup-old-test-db
