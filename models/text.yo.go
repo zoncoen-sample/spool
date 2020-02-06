@@ -5,6 +5,7 @@ package models
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"cloud.google.com/go/spanner"
 	"google.golang.org/grpc/codes"
@@ -12,8 +13,9 @@ import (
 
 // Text represents a row from 'Texts'.
 type Text struct {
-	TextID string `spanner:"TextId" json:"TextId"` // TextId
-	Body   string `spanner:"Body" json:"Body"`     // Body
+	TextID    string    `spanner:"TextId" json:"TextId"`       // TextId
+	Body      string    `spanner:"Body" json:"Body"`           // Body
+	CreatedAt time.Time `spanner:"CreatedAt" json:"CreatedAt"` // CreatedAt
 }
 
 func TextPrimaryKeys() []string {
@@ -26,6 +28,7 @@ func TextColumns() []string {
 	return []string{
 		"TextId",
 		"Body",
+		"CreatedAt",
 	}
 }
 
@@ -42,6 +45,8 @@ func (t *Text) columnsToPtrs(cols []string, customPtrs map[string]interface{}) (
 			ret = append(ret, &t.TextID)
 		case "Body":
 			ret = append(ret, &t.Body)
+		case "CreatedAt":
+			ret = append(ret, &t.CreatedAt)
 		default:
 			return nil, fmt.Errorf("unknown column: %s", col)
 		}
@@ -57,6 +62,8 @@ func (t *Text) columnsToValues(cols []string) ([]interface{}, error) {
 			ret = append(ret, t.TextID)
 		case "Body":
 			ret = append(ret, t.Body)
+		case "CreatedAt":
+			ret = append(ret, t.CreatedAt)
 		default:
 			return nil, fmt.Errorf("unknown column: %s", col)
 		}
@@ -89,7 +96,7 @@ func newText_Decoder(cols []string) func(*spanner.Row) (*Text, error) {
 // exists, the write or transaction fails.
 func (t *Text) Insert(ctx context.Context) *spanner.Mutation {
 	return spanner.Insert("Texts", TextColumns(), []interface{}{
-		t.TextID, t.Body,
+		t.TextID, t.Body, t.CreatedAt,
 	})
 }
 
@@ -97,7 +104,7 @@ func (t *Text) Insert(ctx context.Context) *spanner.Mutation {
 // already exist, the write or transaction fails.
 func (t *Text) Update(ctx context.Context) *spanner.Mutation {
 	return spanner.Update("Texts", TextColumns(), []interface{}{
-		t.TextID, t.Body,
+		t.TextID, t.Body, t.CreatedAt,
 	})
 }
 
@@ -106,7 +113,7 @@ func (t *Text) Update(ctx context.Context) *spanner.Mutation {
 // written are preserved.
 func (t *Text) InsertOrUpdate(ctx context.Context) *spanner.Mutation {
 	return spanner.InsertOrUpdate("Texts", TextColumns(), []interface{}{
-		t.TextID, t.Body,
+		t.TextID, t.Body, t.CreatedAt,
 	})
 }
 

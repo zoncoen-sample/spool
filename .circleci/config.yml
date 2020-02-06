@@ -52,7 +52,7 @@ jobs:
           command: make tools
       - run:
           name: cleanup databases
-          command: make test/clean
+          command: make spool/clean
 
 workflows:
   version: 2

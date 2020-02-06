@@ -52,8 +52,9 @@ func TestNewSpannerClient(t *testing.T) {
 		defer cancel()
 		if _, err := client.ReadWriteTransaction(ctx, func(ctx context.Context, tx *spanner.ReadWriteTransaction) error {
 			txt := &models.Text{
-				TextID: id,
-				Body:   "hello",
+				TextID:    id,
+				Body:      "hello",
+				CreatedAt: time.Now(),
 			}
 			return tx.BufferWrite([]*spanner.Mutation{txt.Insert(ctx)})
 		}); err != nil {
@@ -72,6 +73,9 @@ func TestNewSpannerClient(t *testing.T) {
 			}
 			if got, expect := txt.Body, "hello"; got != expect {
 				t.Errorf("expect %s but got %s", expect, got)
+			}
+			if txt.CreatedAt.IsZero() {
+				t.Error("CreatedAt is zero")
 			}
 		})
 		t.Run("not found", func(t *testing.T) {
